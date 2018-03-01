@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Simple Map</title>
+        <meta name="viewport" content="initial-scale=1.0">
+        <meta charset="utf-8">
+        <style>
+            /* Always set the map height explicitly to define the size of the div element that contains the map. */
+            #map 
+            {
+                height: 100%;
+            }
+            /* Optional: Makes the sample page fill the window. */
+            html, body 
+            {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="map"></div>
+        <script>
+
+            /*
+            Quotas
+            2,500 free requests per day, calculated as the sum of client-side and server-side queries; enable billing to access higher daily quotas, billed at $0.50 USD / 1000 additional requests, up to 100,000 requests daily.
+            512 locations per request.
+            50 requests per second*, calculated as the sum of client-side and server-side queries combined.
+            */
+
+            var map;
+            function initMap() 
+            {
+                map = new google.maps.Map(document.getElementById('map'), 
+                {
+                    center: {lat: -34.397, lng: 150.644},
+                    zoom: 8
+                });
+
+                var elevator = new google.maps.ElevationService;
+                var infowindow = new google.maps.InfoWindow({map: map});
+
+                // Add a listener for the click event. Display the elevation for the LatLng of
+                // the click inside the infowindow.
+                map.addListener('click', function(event) 
+                {
+                    console.log(event.latLng);
+                    displayLocationElevation(event.latLng, elevator, infowindow);
+                });
+
+                function displayLocationElevation(location, elevator, infowindow) 
+                {
+                    // Initiate the location request
+                    elevator.getElevationForLocations(
+                    {
+                        'locations': [location]
+                    }, 
+                    function(results, status) 
+                    {
+                        infowindow.setPosition(location);
+                        if (status === 'OK') 
+                        {
+                            // Retrieve the first result
+                            if (results[0]) 
+                            {
+                                // Open the infowindow indicating the elevation at the clicked position.
+                                infowindow.setContent('The elevation at this point <br>is ' +
+                                results[0].elevation + ' meters.');
+                            } 
+                            else infowindow.setContent('No results found');
+                        }
+                        else infowindow.setContent('Elevation service failed due to: ' + status);
+                    });
+                }
+            }
+        </script>
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyABGvJPIPG0O1qsBjVbFYpx4bp_ShWpM98&callback=initMap" async defer></script>
+    </body>
+</html>
