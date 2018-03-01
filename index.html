@@ -39,16 +39,93 @@
                     zoom: 8
                 });
 
+                // Drawing
+                var drawingManager = new google.maps.drawing.DrawingManager(
+                {
+                    drawingMode: google.maps.drawing.OverlayType.RECTANGLE,
+                    drawingControl: true,
+                    drawingControlOptions: 
+                    {
+                        position: google.maps.ControlPosition.TOP_CENTER,
+                        drawingModes: ['rectangle']
+                    },
+                    rectangleOptions: 
+                    {
+                        fillColor: '#0000ff',
+                        fillOpacity: 0.1,
+                        strokeColor: '#0000ff',
+                        strokeWeight: 1,
+                        clickable: true,
+                        draggable: true,
+                        editable: true,
+                        zIndex: 1
+                    }
+                });
+                drawingManager.setMap(map);
+
+                var activeRect = null;
+                google.maps.event.addListener(drawingManager, 'rectanglecomplete', function(rect) 
+                {
+                    console.log('rectanglecomplete');
+
+                    if (activeRect !== null) 
+                    {
+                        activeRect.setMap(null);
+                        google.maps.event.clearInstanceListeners(activeRect);
+                        activeRect = null;
+                    }
+                    activeRect = rect;
+                    activeRect.addListener('bounds_changed', function()
+                    {
+                        setBounds(activeRect.getBounds());
+                    });
+
+                    setBounds(activeRect.getBounds());
+
+                    // Switch back to non-drawing mode after drawing a shape.
+                    // drawingManager.setDrawingMode(null);
+                });
+                google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) 
+                {
+                    console.log('overlaycomplete');
+                    if (event.type == 'rectangle') {}
+                });
+                map.addListener('mousedown', function(event) 
+                {
+                    if (drawingManager.drawingMode == 'rectangle') 
+                    {
+                        if (activeRect !== null) 
+                        {
+                            activeRect.setMap(null);
+                            google.maps.event.clearInstanceListeners(activeRect);
+                            activeRect = null;
+                        }
+                    }
+                });
+
+                var setBounds = debounce(function (gBounds) 
+                {
+                    var ne = gBounds.getNorthEast();
+                    var sw = gBounds.getSouthWest();
+
+                    var contentString = '<b>Rectangle moved.</b><br>' +
+                        'New north-east corner: ' + ne.lat() + ', ' + ne.lng() + '<br>' +
+                        'New south-west corner: ' + sw.lat() + ', ' + sw.lng();
+
+                    console.log(contentString);
+                });
+
+                // Elevation.
                 var elevator = new google.maps.ElevationService;
                 var infowindow = new google.maps.InfoWindow({map: map});
 
                 // Add a listener for the click event. Display the elevation for the LatLng of
                 // the click inside the infowindow.
-                map.addListener('click', function(event) 
+                /*map.addListener('click', function(event) 
                 {
                     console.log(event.latLng);
                     displayLocationElevation(event.latLng, elevator, infowindow);
-                });
+                });*/
 
                 function displayLocationElevation(location, elevator, infowindow) 
                 {
@@ -74,8 +151,27 @@
                         else infowindow.setContent('Elevation service failed due to: ' + status);
                     });
                 }
+
+                // Util.
+                function debounce(func, wait, immediate) 
+                {
+                    var timeout;
+                    return function() 
+                    {
+                        var me = this, args = arguments;
+                        var later = function() 
+                        {
+                            timeout = null;
+                            if (!immediate) func.apply(me, args);
+                        };
+                        var callNow = immediate && !timeout;
+                        clearTimeout(timeout);
+                        timeout = setTimeout(later, wait || 250);
+                        if (callNow) func.apply(me, args);
+                    };
+                }
             }
         </script>
-        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyABGvJPIPG0O1qsBjVbFYpx4bp_ShWpM98&callback=initMap" async defer></script>
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyABGvJPIPG0O1qsBjVbFYpx4bp_ShWpM98&callback=initMap&libraries=drawing" async defer></script>
     </body>
 </html>
