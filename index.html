@@ -23,13 +23,6 @@
         <div id="map"></div>
         <script>
 
-            /*
-            Quotas
-            2,500 free requests per day, calculated as the sum of client-side and server-side queries; enable billing to access higher daily quotas, billed at $0.50 USD / 1000 additional requests, up to 100,000 requests daily.
-            512 locations per request.
-            50 requests per second*, calculated as the sum of client-side and server-side queries combined.
-            */
-
             var map;
             function initMap() 
             {
@@ -67,11 +60,13 @@
                 });
                 drawingManager.setMap(map);
 
+                var doRaster = true;
+
                 var activeRect = null;
                 google.maps.event.addListener(drawingManager, 'rectanglecomplete', function(rect) 
                 {
                     console.log('rectanglecomplete');
-
+doRaster = true;
                     if (activeRect !== null) 
                     {
                         activeRect.setMap(null);
@@ -84,6 +79,7 @@
                         setBounds(activeRect.getBounds());
                     });
                     setBounds(activeRect.getBounds());
+
 
                     // Switch back to non-drawing mode after drawing a shape.
                     // drawingManager.setDrawingMode(null);
@@ -121,6 +117,12 @@
                 });
 
                 // Elevation.
+                /*
+                Quotas
+                2,500 free requests per day, calculated as the sum of client-side and server-side queries; enable billing to access higher daily quotas, billed at $0.50 USD / 1000 additional requests, up to 100,000 requests daily.
+                512 locations per request.
+                50 requests per second*, calculated as the sum of client-side and server-side queries combined.
+                */
                 var elevator = new google.maps.ElevationService;
                 var infowindow = new google.maps.InfoWindow({map: map});
 
@@ -218,9 +220,12 @@
 
                 Raster.prototype.draw = function() 
                 {
-                    console.log('draw');
-                    if (this._bounds !== null)
+                    if (this._bounds !== null && doRaster)
                     {
+                    console.log('draw');
+                doRaster = false;
+
+
                         // We use the south-west and north-east
                         // coordinates of the overlay to peg it to the correct position and size.
                         // To do this, we need to retrieve the projection from the overlay.
@@ -231,73 +236,150 @@
                         // We'll use these coordinates to resize the div.
                         var sw = overlayProjection.fromLatLngToDivPixel(this._bounds.getSouthWest());
                         var ne = overlayProjection.fromLatLngToDivPixel(this._bounds.getNorthEast());
-
                         var w = (ne.x - sw.x);
                         var h = (sw.y - ne.y);
 
-                        // Resize the image's div to fit the indicated dimensions.
+                        // Resize the canvases div to fit the indicated dimensions.
                         this._div.style.left = sw.x + 'px';
                         this._div.style.top = ne.y + 'px';
                         this._div.style.width = w + 'px';
                         this._div.style.height = h + 'px';
 
+                        // Resize the canvas.
                         this._canvas.width = w;
                         this._canvas.height = h;
 
-                       /* this._context.fillStyle = "#FF0000";
-                        this._context.fillRect(0,0,150,75);*/
+                        // Calculate grid.
+                        var quotaLimit = 512;
+                        var dim = Math.min(w, h);
+                        var noPointsAlongSide = Math.floor(Math.sqrt(quotaLimit));
 
-                        var res = 20;
-                        var nCols = Math.ceil(w / res);
-                        var nRows = Math.ceil(h / res);
 
-                        var pixelData = new Array();
-                        for (var i = 0; i < nRows; i++) 
+                        var n  = this._bounds.getNorthEast().lat();   
+                        var e  = this._bounds.getNorthEast().lng();
+                        var s  = this._bounds.getSouthWest().lat();   
+                        var w  = this._bounds.getSouthWest().lng();
+
+                        var dimLat = (n - s) / noPointsAlongSide;
+                        var dimLong = (e - w) / noPointsAlongSide;
+
+                        console.log(dimLat+" "+dimLong);
+
+                        var arrPoints = [];
+                        for (var i = 0; i < noPointsAlongSide; i++) 
                         {
-                            pixelData[i] = new Array();
-                            for (var j = 0; j < nCols; j++) 
+                            lat = n - (dimLat * i)
+                            for (var j = 0; j < noPointsAlongSide; j++) 
                             {
-                                pixelData[i][j] = {r:Math.floor(Math.random()*255), g:Math.floor(Math.random()*255), b:Math.floor(Math.random()*255)};
+                                lng = w + (dimLong * j)
+                                var pt = new google.maps.LatLng(lat, lng);
+                                arrPoints.push(pt);
                             }
                         }
-                        console.log(pixelData);
+                        //console.log(arrPoints)
 
-                        var imgW = nCols * res;
-                        var imgH = nRows * res;
-                        var imgData = this._context.createImageData(imgW, imgH);
 
-                        var iCol = 0, iRow = 0;
-                        var index = 0
-                        for (var i=0; i<imgData.data.length; i+=4) 
+                        var nCols = noPointsAlongSide; // Number of columns (x).
+                        var nRows = noPointsAlongSide; // Number of rows (y).
+                        var xRes = Math.ceil(dim / nCols);
+                        var yRes = Math.ceil(dim / nRows);
+
+
+                        //var p = new google.maps.LatLng(-34, 151)
+
+
+                        // Raster.
+                        //var xRes = 5; // x resolution (pixels).
+                        //var yRes = 5; // y resolution (pixels).
+                        //var nCols = Math.ceil(w / xRes); // Number of columns (x).
+                        //var nRows = Math.ceil(h / yRes); // Number of rows (y).
+
+var me = this;
+
+ // Initiate the location request
+                        elevator.getElevationForLocations(
                         {
-
-                            /*imgData.data[i] = Math.random() * 255; 
-                            imgData.data[i+1] = Math.random() * 255; 
-                            imgData.data[i+2] = Math.random() * 255; 
-                            imgData.data[i+3] = 255; */
-
-                            if (index >= res)
+                            'locations': arrPoints
+                        }, 
+                        function(results, status) 
+                        {
+                            console.log(results);
+                            if (status === 'OK') 
                             {
-                                index = 0;
-                                iCol++;
+
+                                var minE = Infinity;
+                                var maxE = -Infinity;
+                                for (var i = 0; i < results.length; i++) 
+                                { 
+                                    var e = results[i].elevation;
+                                    maxE = Math.max(maxE, e);
+                                    minE = Math.min(minE, e);
+
+                                }
+
+                                var index = 0
+
+                                // Make up some pixel data.
+                                var pixelData = new Array();
+                                for (var i = 0; i < nRows; i++) 
+                                {
+                                    pixelData[i] = new Array();
+                                    for (var j = 0; j < nCols; j++) 
+                                    {
+                                        //var f = (n - arrPoints[index].lat()) / (n - s);
+                                        var f = (maxE- results[index].elevation) / (maxE - minE);
+                                        index++;
+
+                                        pixelData[i][j] = 
+                                        {
+                                            /*r:Math.floor(Math.random() * 255), 
+                                            g:Math.floor(Math.random() * 255), 
+                                            b:Math.floor(Math.random() * 255)*/
+                                            r:Math.floor(f * 255), 
+                                            g:Math.floor(f * 255), 
+                                            b:Math.floor(f * 255)
+                                        };
+                                    }
+                                }
+
+                                // Image data.
+                                // ImageData.data is a one-dimensional array containing the data in the RGBA order, 
+                                // with integer values between 0 and 255. ie Each pixel is represented in 
+                                // imgData.data by 4 values for each component of RGBA.
+
+                                var wPixel = nCols * xRes; // The actual width, in pixels, of imgData.
+                                var hPixel = nRows * yRes; // The actual height, in pixels, of imgData.
+                                var imgData = me._context.createImageData(wPixel, hPixel);
+
+                                var iCol = 0, iRow = 0, xPixel = 0, yPixel = 0;
+                                for (var i = 0; i < imgData.data.length; i += 4) 
+                                {
+                                    if (xPixel === xRes)
+                                    {
+                                        xPixel = 0;
+                                        iCol++;
+                                    }
+                                    if (iCol === nCols)
+                                    {
+                                        yPixel++;
+                                        iCol = 0;
+                                    }
+                                    if (yPixel === yRes)
+                                    {
+                                        yPixel = 0;
+                                        iRow++;
+                                    }
+
+                                    imgData.data[i] = pixelData[iRow][iCol].r; 
+                                    imgData.data[i+1] = pixelData[iRow][iCol].g; 
+                                    imgData.data[i+2] = pixelData[iRow][iCol].b; 
+                                    imgData.data[i+3] = 255; 
+
+                                    xPixel++;
+                                }
+                                me._context.putImageData(imgData, 0, 0);
                             }
-
-                            if (iCol === nCols)
-                            {
-                                iCol = 0;
-                                iRow++;
-                            } 
-
-                            console.log(iRow+" "+iCol)
-
-                            imgData.data[i] = pixelData[iRow][iCol].r; 
-                            imgData.data[i+1] = pixelData[iRow][iCol].g; 
-                            imgData.data[i+2] = pixelData[iRow][iCol].b; 
-                            imgData.data[i+3] = 255; 
-
-                            index+=4;
-                        }
-                        this._context.putImageData(imgData, 0, 0);
+                        });
 
                     }
                 };
