@@ -30,8 +30,6 @@
             // Min and max values for chart
             var xAxisActualMin = Math.min.apply(null, arrDenominator);
             var xAxisActualMax = Math.max.apply(null, arrDenominator);
-            var yAxisActualMin = Math.min.apply(null, arrNumerator) * proportionMultiplier;
-            var yAxisActualMax = Math.max.apply(null, arrNumerator) * proportionMultiplier;
 
             var xAxisNewMin = 0;
             if (xAxisActualMax <= 2*xAxisActualMin) 
@@ -40,13 +38,29 @@
                 var q = Math.floor(n).toString().length - 1;
                 xAxisNewMin = roundDown(n, Math.pow(10, q));
             }
+
             var n = xAxisActualMax * 1.05;
             var q = Math.ceil(n).toString().length - 2;
             var xAxisNewMax = roundUp(n, Math.pow(10, q));
 
+            console.log(xAxisActualMin+" "+xAxisActualMax+" "+xAxisNewMin+" "+xAxisNewMax);
 
+            var yAxisActualMin = Math.min.apply(null, arrProportion) * proportionMultiplier;
+            var yAxisActualMax = Math.max.apply(null, arrProportion) * proportionMultiplier;
 
+            var yAxisNewMin = 0;
+            if (yAxisActualMax <= 2*yAxisActualMin) 
+            {
+                var n = yAxisActualMin * 0.98;
+                var q = Math.floor(n).toString().length - 1;
+                yAxisNewMin = roundDown(n, Math.pow(10, q));
+            }
 
+            var n = Math.max(yAxisActualMax, averageProportion) * 1.02;
+            var q = Math.ceil(n).toString().length - 2;
+            var yAxisNewMax = roundUp(n, Math.pow(10, q));
+
+            console.log(yAxisActualMin+" "+yAxisActualMax+" "+yAxisNewMin+" "+yAxisNewMax);
 
             // Chart lines.
             var arrXAxisValues = [];
@@ -65,20 +79,19 @@
                 if (i === 1) xAxisValue = Math.max(1, xAxisNewMin);
                 else 
                 {
-                    var p = xAxisValue[i-1];
+                    var p = arrXAxisValues[i-1];
                     xAxisValue = Math.max(Math.round(Math.pow(xAxisNewMax/p, 1/(101-i)) * p), p + 1);
                 }
+                arrXAxisValues.push(xAxisValue);
             }
 
-            function roundUp(num, precision) 
+            function roundUp(num, multiple) 
             {
-                precision = Math.pow(10, precision);
-                return Math.ceil(num * precision) / precision;
+                return Math.ceil(num / multiple) * multiple;
             }
-            function roundDown(num, precision) 
-            {
-                precision = Math.pow(10, precision);
-                return Math.floor(num * precision) / precision;
+            function roundDown(num, multiple) 
+            {                
+                return Math.floor(num / multiple) * multiple;
             }
 
             function getLimits()
