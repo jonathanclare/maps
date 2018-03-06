@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Simple Map</title>
+        <meta name="viewport" content="initial-scale=1.0">
+        <meta charset="utf-8">
+
+    </head>
+    <body>
+        <script>
+            var proportionMultiplier = 100;
+            var arrNumerator = [5,13,8,5,0,3,0,9,1,9,1,0,2];
+            var arrDenominator = [3730,4498,6266,1658,4120,4224,3991,4579,2251,2269,3224,172,1440];
+
+            // Data used for calculations
+            var arrProportion = arrNumerator.map(function(val, index) 
+            {
+                return (val / arrDenominator[index]);
+            });
+            var arrYAxisValues = arrProportion.map(function(val, index) 
+            {
+                return (val * proportionMultiplier);
+            });
+
+            // Average values for chart
+            var sumNumerator = arrNumerator.reduce(function(total, num) {return (total + num);});
+            var sumDenominator = arrNumerator.reduce(function(total, num) {return (total + num);});
+            var averageProportion = (sumNumerator / sumDenominator) * proportionMultiplier;
+
+            // Min and max values for chart
+            var xAxisActualMin = Math.min.apply(null, arrDenominator);
+            var xAxisActualMax = Math.max.apply(null, arrDenominator);
+            var yAxisActualMin = Math.min.apply(null, arrNumerator) * proportionMultiplier;
+            var yAxisActualMax = Math.max.apply(null, arrNumerator) * proportionMultiplier;
+
+            var xAxisNewMin = 0;
+            if (xAxisActualMax <= 2*xAxisActualMin) 
+            {
+                var n = xAxisActualMin * 0.95;
+                var q = Math.floor(n).toString().length - 1;
+                xAxisNewMin = roundDown(n, Math.pow(10, q));
+            }
+            var n = xAxisActualMax * 1.05;
+            var q = Math.ceil(n).toString().length - 2;
+            var xAxisNewMax = roundUp(n, Math.pow(10, q));
+
+
+
+
+
+            // Chart lines.
+            var arrXAxisValues = [];
+            var arrBaseline = [];
+            var arrRow = [];
+            var arrUpper3SD = [];
+            var arrLower3SD = [];
+            var arrUpper2SD = [];
+            var arrLower2SD = [];
+            for (var i = 1; i <= 100; i++) 
+            {
+                arrBaseline.push(averageProportion);
+                arrRow.push(i);
+
+                var xAxisValue;
+                if (i === 1) xAxisValue = Math.max(1, xAxisNewMin);
+                else 
+                {
+                    var p = xAxisValue[i-1];
+                    xAxisValue = Math.max(Math.round(Math.pow(xAxisNewMax/p, 1/(101-i)) * p), p + 1);
+                }
+            }
+
+            function roundUp(num, precision) 
+            {
+                precision = Math.pow(10, precision);
+                return Math.ceil(num * precision) / precision;
+            }
+            function roundDown(num, precision) 
+            {
+                precision = Math.pow(10, precision);
+                return Math.floor(num * precision) / precision;
+            }
+
+            function getLimits()
+            {
+                var arrUpper = [], arrLower = [];
+                for (var i = 0; i < arrXAxisValues.length; i++) 
+                {
+                    var xAxisValue = arrXAxisValues[i];
+
+                    var sd = 0.998;
+                    var a = Math.pow(NORMSINV((1-sd)/2), 2);
+                    var b = xAxisValue/a;
+                    var c = averageProportion/proportionMultiplier;
+                    var d = Math.pow((-8*c*(b+1)),2);
+
+                    var upper3SD = Math.min(proportionMultiplier,((c*(b+1)+Math.sqrt(d-64*(1/a+1/xAxisValue)*c*(xAxisValue*(c*(b+2)-1)+a*(c-1)))/8)/(1/a +1/xAxisValue)/xAxisValue)*proportionMultiplier);
+
+                    var lower3SD = Math.max(proportionMultiplier,((c*(b+1)-Math.sqrt(d-64*(1/a+1/xAxisValue)*c*(xAxisValue*(c*(b+2)-1)+a*(c-1)))/8)/(1/a +1/xAxisValue)/xAxisValue)*proportionMultiplier);
+
+                    sd = 0.95;
+                    a = Math.pow(NORMSINV((1-sd)/2), 2);
+                    b = xAxisValue/a;
+                    c = averageProportion/proportionMultiplier;
+                    d = Math.pow((-8*c*(b+1)),2);
+
+                    var upper2SD = Math.min(proportionMultiplier,((c*(b+1)+Math.sqrt(d-64*(1/a+1/xAxisValue)*c*(xAxisValue*(c*(b+2)-1)+a*(c-1)))/8)/(1/a +1/xAxisValue)/xAxisValue)*proportionMultiplier);
+
+                    var sd = 0.95
+                    var lower2SD = Math.max(proportionMultiplier,((c*(b+1)-Math.sqrt(d-64*(1/a+1/xAxisValue)*c*(xAxisValue*(c*(b+2)-1)+a*(c-1)))/8)/(1/a +1/xAxisValue)/xAxisValue)*proportionMultiplier);
+
+                    arrUpper3SD.push(upper3SD);
+                    arrLower3SD.push(lower3SD);
+                    arrUpper2SD.push(upper2SD);
+                    arrLower2SD.push(lower2SD);
+                }
+            }
+
+            function NORMSINV(p) 
+            {
+                var a1 = -39.6968302866538, a2 = 220.946098424521, a3 = -275.928510446969;
+                var a4 = 138.357751867269, a5 = -30.6647980661472, a6 = 2.50662827745924;
+                var b1 = -54.4760987982241, b2 = 161.585836858041, b3 = -155.698979859887;
+                var b4 = 66.8013118877197, b5 = -13.2806815528857, c1 = -7.78489400243029E-03;
+                var c2 = -0.322396458041136, c3 = -2.40075827716184, c4 = -2.54973253934373;
+                var c5 = 4.37466414146497, c6 = 2.93816398269878, d1 = 7.78469570904146E-03;
+                var d2 = 0.32246712907004, d3 = 2.445134137143, d4 = 3.75440866190742;
+                var p_low = 0.02425, p_high = 1 - p_low;
+                var q, r;
+                var retVal;
+                if ((p < 0) || (p > 1))
+                {
+                    console.log('NORMSINV: Argument out of range.');
+                    retVal = 0;
+                }
+                else if (p < p_low)
+                {
+                    q = Math.sqrt(-2 * Math.log(p));
+                    retVal = (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+                }
+                else if (p <= p_high)
+                {
+                    q = p - 0.5;
+                    r = q * q;
+                    retVal = (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q / (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1);
+                }
+                else
+                {
+                    q = Math.sqrt(-2 * Math.log(1 - p));
+                    retVal = -(((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+                }
+                return retVal;
+            }
+        </script>
+    </body>
+</html>
