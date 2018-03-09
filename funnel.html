@@ -16,7 +16,7 @@
         function getFunnelData(arrNumerator, arrDenominator)
         {
             var o = {};
-            o.proportionMultiplier = 100;;
+            o.proportionMultiplier = 100;
 
             // Data used for calculations
             o.arrProportion = arrNumerator.map(function(val, index) 
@@ -112,7 +112,6 @@
                 o.arrUpper2SD.push(upper2SD);
                 o.arrLower2SD.push(lower2SD);
             }
-
             function roundUp(num, multiple) 
             {
                 return Math.ceil(num / multiple) * multiple;
@@ -121,7 +120,6 @@
             {                
                 return Math.floor(num / multiple) * multiple;
             }
-
             function NORMSINV(p) 
             {
                 var a1 = -39.6968302866538, a2 = 220.946098424521, a3 = -275.928510446969;

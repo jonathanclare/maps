@@ -220,9 +220,10 @@ doRaster = true;
 
                 Raster.prototype.draw = function() 
                 {
+                    console.log('draw');
                     if (this._bounds !== null && doRaster)
                     {
-                    console.log('draw');
+                    console.log('yes');
                 doRaster = false;
 
 
