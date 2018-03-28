@@ -264,7 +264,7 @@ doRaster = true;
                         var dimLat = (n - s) / noPointsAlongSide;
                         var dimLong = (e - w) / noPointsAlongSide;
 
-                        console.log(dimLat+" "+dimLong);
+                        //console.log(dimLat+" "+dimLong);
 
                         var arrPoints = [];
                         for (var i = 0; i < noPointsAlongSide; i++) 
@@ -307,6 +307,7 @@ var me = this;
                             console.log(results);
                             if (status === 'OK') 
                             {
+                                var arrX = [], arrY = [], arrZ = [];
 
                                 var minE = Infinity;
                                 var maxE = -Infinity;
@@ -316,7 +317,11 @@ var me = this;
                                     maxE = Math.max(maxE, e);
                                     minE = Math.min(minE, e);
 
+                                    arrX.push(results[i].location.lng());
+                                    arrY.push(results[i].location.lat());
+                                    arrZ.push(results[i].elevation);
                                 }
+
 
                                 var index = 0
 
@@ -348,11 +353,90 @@ var me = this;
                                 // with integer values between 0 and 255. ie Each pixel is represented in 
                                 // imgData.data by 4 values for each component of RGBA.
 
+
+
+                                console.log(arrX)
+                                console.log(arrY)
+                                console.log(arrZ)
+
+var model = "exponential";
+var sigma2 = 0, alpha = 100;
+var variogram = kriging.train(arrZ, arrX, arrY, model, sigma2, alpha);
+
+
+            var wPixel = nCols * xRes; // The actual width, in pixels, of imgData.
+            var hPixel = nRows * yRes; // The actual height, in pixels, of imgData.
+            var imgData = me._context.createImageData(wPixel, hPixel);
+
+            var iCol = 0, iRow = 0, xPixel = 0, yPixel = 0;
+
+
+
+
+            var xIndex = 0;
+            var yIndex = 0;
+
+
+            for (var i = 0; i < imgData.data.length; i += 4) 
+            {
+                if (xPixel === xRes)
+                {
+                    xPixel = 0;
+                    iCol++;
+                }
+                if (iCol === nCols)
+                {
+                    yPixel++;
+                    iCol = 0;
+                }
+                if (yPixel === yRes)
+                {
+                    yPixel = 0;
+                    iRow++;
+                }
+
+                if (xIndex === wPixel)
+                {
+                    xIndex = 0;
+                    yIndex ++;
+                }
+
+                var xNew = 
+                var yNew = 
+
+
+                var z = kriging.predict(xNew, yNew, variogram);
+                var f = (maxE - z) / (maxE - minE);
+                var c = Math.floor(f * 255);
+
+                imgData.data[i] = c; 
+                imgData.data[i+1] = c; 
+                imgData.data[i+2] = c; 
+                imgData.data[i+3] = 255; 
+
+                xPixel++;
+            }
+            me._context.putImageData(imgData, 0, 0);
+        }
+
+
+  //var tpredicted = kriging.predict(xnew, ynew, variogram);
+
+
+
+
+
+
+
+
+/*
                                 var wPixel = nCols * xRes; // The actual width, in pixels, of imgData.
                                 var hPixel = nRows * yRes; // The actual height, in pixels, of imgData.
                                 var imgData = me._context.createImageData(wPixel, hPixel);
 
                                 var iCol = 0, iRow = 0, xPixel = 0, yPixel = 0;
+
+
                                 for (var i = 0; i < imgData.data.length; i += 4) 
                                 {
                                     if (xPixel === xRes)
@@ -379,7 +463,7 @@ var me = this;
                                     xPixel++;
                                 }
                                 me._context.putImageData(imgData, 0, 0);
-                            }
+                            }*/
                         });
 
                     }
@@ -403,5 +487,6 @@ var me = this;
             }
         </script>
         <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyABGvJPIPG0O1qsBjVbFYpx4bp_ShWpM98&callback=initMap&libraries=drawing" async defer></script>
+        <script src="./kriging.js"></script>
     </body>
 </html>
